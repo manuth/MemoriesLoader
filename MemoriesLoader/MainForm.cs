@@ -8,16 +8,22 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml.Serialization;
 
 namespace MemoriesLoader
 {
     public partial class MainForm : Form
     {
+        private List<Camera> cameras = new List<Camera>();
+        
+        private Dictionary<string, FileSystemWatcher> fileSystemWatchers = new Dictionary<string, FileSystemWatcher>();
+
         /// <summary>
         /// The main task.
         /// </summary>
@@ -51,6 +57,14 @@ namespace MemoriesLoader
         /// <param name="e">An object that contains no event data.</param>
         private void MainForm_Load(object sender, EventArgs e)
         {
+            if (File.Exists("Cameras.json"))
+            {
+                cameras = (List<Camera>)(new DataContractJsonSerializer(typeof(List<Camera>), new DataContractJsonSerializerSettings
+                {
+                    UseSimpleDictionaryFormat = true
+                }).ReadObject(File.OpenRead("Cameras.json")));
+            }
+
             mainTask = Discover();
         }
 
@@ -71,42 +85,50 @@ namespace MemoriesLoader
 
                         while (!token.IsCancellationRequested)
                         {
+                            if (udpClient.Available > 0)
                             {
-                                if (udpClient.Available > 0)
+                                UdpReceiveResult udpReceiveResult = await udpClient.ReceiveAsync();
+
+                                if (udpReceiveResult.Buffer.Length > 0)
                                 {
-                                    UdpReceiveResult udpReceiveResult = await udpClient.ReceiveAsync();
+                                    string result = Encoding.UTF8.GetString(udpReceiveResult.Buffer);
 
-                                    if (udpReceiveResult.Buffer.Length > 0)
+                                    if (result.ToUpper().Contains("MTPNULLSERVICE") && result.ToUpper().Contains("LOCATION"))
                                     {
-                                        string result = Encoding.UTF8.GetString(udpReceiveResult.Buffer);
+                                        Match match = Regex.Match(result, ".*LOCATION: (.*?)\\r?$", RegexOptions.IgnoreCase | RegexOptions.Multiline);
 
-                                        if (result.ToUpper().Contains("MTPNULLSERVICE") && result.ToUpper().Contains("LOCATION"))
+                                        WebRequest request = WebRequest.Create(match.Groups[1].Value);
+                                        request.Timeout = 4;
+
+                                        try
                                         {
-                                            Match match = Regex.Match(result, ".*LOCATION: (.*?)\\r?$", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+                                            DeviceDescription deviceInfo = (DeviceDescription)new XmlSerializer(typeof(DeviceDescription)).Deserialize((await request.GetResponseAsync()).GetResponseStream());
 
-                                            WebRequest request = WebRequest.Create(match.Groups[1].Value);
-                                            request.Timeout = 4;
-
-                                            try
+                                            if (deviceInfo.Device.Manufacturer == "Sony Corporation")
                                             {
-                                                string deviceInfo = await new StreamReader((await request.GetResponseAsync()).GetResponseStream()).ReadToEndAsync();
+                                                string path = cameras.FirstOrDefault(camera => camera.IPAddress.Equals(udpReceiveResult.RemoteEndPoint.Address))?.Directory ?? udpReceiveResult.RemoteEndPoint.Address.ToString();
 
-                                                if (deviceInfo.Contains("Sony Corporation"))
+                                                if (!Directory.Exists(path))
                                                 {
-                                                    Process process = Process.Start(new ProcessStartInfo("bash", $"-c \"gphoto2 -P --skip-existing --port ptpip:{udpReceiveResult.RemoteEndPoint.Address}\""));
-
-                                                    if (!process.WaitForExit(2 * 60 * 1000)) // Wait 2 minutes for the process to exit
-                                                    {
-                                                        process.Kill();
-                                                    }
+                                                    Directory.CreateDirectory(path);
                                                 }
 
-                                                break;
+                                                Process process = Process.Start(new ProcessStartInfo("bash", $"-c \"gphoto2 -P --skip-existing --port ptpip:{udpReceiveResult.RemoteEndPoint.Address}\"")
+                                                {
+                                                    WorkingDirectory = Path.GetFullPath(path)
+                                                });
+
+                                                if (!process.WaitForExit(2 * 60 * 1000)) // Wait 2 minutes for the process to exit
+                                                {
+                                                    process.Kill();
+                                                }
                                             }
-                                            catch
-                                            {
-                                                // TODO
-                                            }
+
+                                            break;
+                                        }
+                                        catch
+                                        {
+                                            // TODO
                                         }
                                     }
                                 }
