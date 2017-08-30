@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -78,10 +78,20 @@ namespace MemoriesLoader
                 {
                     using (UdpClient udpClient = new UdpClient())
                     {
+                        udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                         /* Listen to packets sent to any ipaddress on port 1900 */
                         udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, upnpBroadcastPort));
                         /* Joining the default UDP broadcast group */
-                        udpClient.JoinMulticastGroup(upnpBroadcastIP);
+                        foreach (IPAddress address in Dns.GetHostAddresses(Dns.GetHostName()))
+                        {
+                            if (!IPAddress.IsLoopback(address) && address.AddressFamily != AddressFamily.InterNetworkV6)
+                            {
+                                udpClient.JoinMulticastGroup(upnpBroadcastIP, address);
+                                break;
+                            }
+                        }
+
+                        udpClient.MulticastLoopback = true;
 
                         while (!token.IsCancellationRequested)
                         {
