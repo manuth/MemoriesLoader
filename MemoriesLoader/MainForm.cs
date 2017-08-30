@@ -20,8 +20,14 @@ namespace MemoriesLoader
 {
     public partial class MainForm : Form
     {
+        /// <summary>
+        /// The destination-path-settings of the cameras.
+        /// </summary>
         private List<Camera> cameras = new List<Camera>();
         
+        /// <summary>
+        /// The filesystem-watchers and the paths they're assigned to.
+        /// </summary>
         private Dictionary<string, FileSystemWatcher> fileSystemWatchers = new Dictionary<string, FileSystemWatcher>();
 
         /// <summary>
@@ -44,6 +50,9 @@ namespace MemoriesLoader
         /// </summary>
         private static int upnpBroadcastPort = 1900;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MainForm"/> class.
+        /// </summary>
         public MainForm()
         {
             InitializeComponent();
@@ -87,7 +96,6 @@ namespace MemoriesLoader
                             if (!IPAddress.IsLoopback(address) && address.AddressFamily != AddressFamily.InterNetworkV6)
                             {
                                 udpClient.JoinMulticastGroup(upnpBroadcastIP, address);
-                                break;
                             }
                         }
 

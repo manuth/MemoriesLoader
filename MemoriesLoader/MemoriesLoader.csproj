@@ -57,6 +57,15 @@
     <Compile Include="Camera.cs" />
     <Compile Include="Device.cs" />
     <Compile Include="DeviceDescription.cs" />
+    <Compile Include="Logging\ConsoleTarget.cs" />
+    <Compile Include="Logging\FileTarget.cs" />
+    <Compile Include="Logging\LogFormatter.cs" />
+    <Compile Include="Logging\Logger.cs" />
+    <Compile Include="Logging\LogMessage.cs" />
+    <Compile Include="Logging\LogTarget.cs" />
+    <Compile Include="Logging\RichTextBoxTarget.cs" />
+    <Compile Include="Logging\LogLevel.cs" />
+    <Compile Include="Logging\StreamTarget.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
