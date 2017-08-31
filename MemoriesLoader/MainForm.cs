@@ -19,6 +19,9 @@ using MemoriesLoader.Logging;
 
 namespace MemoriesLoader
 {
+    /// <summary>
+    /// Provides a hidden main-form of the application.
+    /// </summary>
     public partial class MainForm : Form
     {
         /// <summary>
@@ -101,6 +104,9 @@ namespace MemoriesLoader
             mainTask = Discover();
         }
 
+        /// <summary>
+        /// Starts discovering SSDP-requests.
+        /// </summary>
         private async Task Discover()
         {
             CancellationToken token = tokenSource.Token;
@@ -204,6 +210,11 @@ namespace MemoriesLoader
             }, token);
         }
 
+        /// <summary>
+        /// Safely stops the <see cref="mainTask"/> and closes the form in order to exit the application.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">A <see cref="FormClosingEventArgs"/> that contains the event data.</param>
         private async void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             if (mainTask.Status != TaskStatus.RanToCompletion)
