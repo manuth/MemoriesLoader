@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -15,11 +15,22 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Serialization;
+using MemoriesLoader.Logging;
 
 namespace MemoriesLoader
 {
     public partial class MainForm : Form
     {
+        /// <summary>
+        /// The logger that is used to log the procedure.
+        /// </summary>
+        private Logger logger = new Logger();
+
+        /// <summary>
+        /// The log-formatter to log the procedure.
+        /// </summary>
+        private LogFormatter formatter = new LogFormatter();
+
         /// <summary>
         /// The destination-path-settings of the cameras.
         /// </summary>
@@ -56,6 +67,10 @@ namespace MemoriesLoader
         public MainForm()
         {
             InitializeComponent();
+            formatter.Formatter = new Func<LogMessage, string>(message =>
+            {
+                return $"{message.Time.TimeOfDay} {$"[{message.Level}]".PadRight(6)}\t{message.Description}";
+            });
         }
 
         /// <summary>
@@ -72,6 +87,15 @@ namespace MemoriesLoader
                 {
                     UseSimpleDictionaryFormat = true
                 }).ReadObject(File.OpenRead("Cameras.json")));
+
+                string message = Environment.NewLine + "\tSettings found located at .\\Cameras.json.";
+
+                foreach (Camera camera in cameras)
+                {
+                    message += Environment.NewLine + $"\t\tIPAddress: {camera.IPAddress.ToString()},\tOutput-Directory: {camera.Directory}";
+                }
+
+                logger.Info(message);
             }
 
             mainTask = Discover();
@@ -90,19 +114,25 @@ namespace MemoriesLoader
                         udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                         /* Listen to packets sent to any ipaddress on port 1900 */
                         udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, upnpBroadcastPort));
-                        /* Joining the default UDP broadcast group */
-                        foreach (IPAddress address in Dns.GetHostAddresses(Dns.GetHostName()))
-                        {
-                            if (!IPAddress.IsLoopback(address) && address.AddressFamily != AddressFamily.InterNetworkV6)
-                            {
-                                udpClient.JoinMulticastGroup(upnpBroadcastIP, address);
-                            }
-                        }
 
-                        udpClient.MulticastLoopback = true;
+                        logger.Debug($"Starting to listen to {udpClient.Client.LocalEndPoint}...");
+
+                        /* Joining the default UDP broadcast group */
+                        {
+                            IPAddress ipAddress =
+                            (
+                                from address in await Dns.GetHostAddressesAsync(Dns.GetHostName())
+                                where !IPAddress.IsLoopback(address)
+                                select address
+                            ).First();
+                            udpClient.JoinMulticastGroup(upnpBroadcastIP, ipAddress);
+                            logger.Debug($"Adding {ipAddress} to Multicast-Group {upnpBroadcastIP}");
+                        }
 
                         while (!token.IsCancellationRequested)
                         {
+                            logger.Info("Waiting for a request performed by a device that supports the MtpNullService...");
+
                             if (udpClient.Available > 0)
                             {
                                 UdpReceiveResult udpReceiveResult = await udpClient.ReceiveAsync();
@@ -114,17 +144,28 @@ namespace MemoriesLoader
                                     if (result.ToUpper().Contains("MTPNULLSERVICE") && result.ToUpper().Contains("LOCATION"))
                                     {
                                         Match match = Regex.Match(result, ".*LOCATION: (.*?)\\r?$", RegexOptions.IgnoreCase | RegexOptions.Multiline);
-
                                         WebRequest request = WebRequest.Create(match.Groups[1].Value);
                                         request.Timeout = 4;
+
+                                        logger.Info($"Downloading device-description from \"{request.RequestUri}\"...");
 
                                         try
                                         {
                                             DeviceDescription deviceInfo = (DeviceDescription)new XmlSerializer(typeof(DeviceDescription)).Deserialize((await request.GetResponseAsync()).GetResponseStream());
 
+                                            logger.Info("Sucessfully downloaded the device-description:" + Environment.NewLine +
+                                                $"\tName:\t{deviceInfo.Device.Name}" + Environment.NewLine +
+                                                $"\tManufacturer:\t{deviceInfo.Device.Manufacturer}" + Environment.NewLine +
+                                                $"\t{"Website".PadLeft(12)}:\t{deviceInfo.Device.ManufacturerUri}" + Environment.NewLine +
+                                                $"\tGUID:\t{deviceInfo.Device.GUID}");
+                                            logger.Info("Checking whether it's a Sony camera...");
+
                                             if (deviceInfo.Device.Manufacturer == "Sony Corporation")
                                             {
                                                 string path = cameras.FirstOrDefault(camera => camera.IPAddress.Equals(udpReceiveResult.RemoteEndPoint.Address))?.Directory ?? udpReceiveResult.RemoteEndPoint.Address.ToString();
+
+                                                logger.Info("Success!");
+                                                logger.Info($"The files received from {udpReceiveResult.RemoteEndPoint.Address} will be saved to \"{Path.GetFullPath(path)}\"");
 
                                                 if (!Directory.Exists(path))
                                                 {
@@ -133,8 +174,11 @@ namespace MemoriesLoader
 
                                                 Process process = Process.Start(new ProcessStartInfo("bash", $"-c \"gphoto2 -P --skip-existing --port ptpip:{udpReceiveResult.RemoteEndPoint.Address}\"")
                                                 {
-                                                    WorkingDirectory = Path.GetFullPath(path)
+                                                    WorkingDirectory = Path.GetFullPath(path),
+                                                    WindowStyle = ProcessWindowStyle.Hidden
                                                 });
+
+                                                logger.Info($"Running following command: {process.StartInfo.FileName} {process.StartInfo.Arguments}");
 
                                                 if (!process.WaitForExit(2 * 60 * 1000)) // Wait 2 minutes for the process to exit
                                                 {
@@ -152,6 +196,7 @@ namespace MemoriesLoader
                                 }
                             }
                         }
+                        logger.Info("Cleaning up, leaving MulticastGroups and closing the udp client...");
                         udpClient.DropMulticastGroup(upnpBroadcastIP);
                         udpClient.Close();
                     }

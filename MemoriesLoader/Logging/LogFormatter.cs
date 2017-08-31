@@ -16,7 +16,7 @@ namespace MemoriesLoader.Logging
         /// </summary>
         public Func<LogMessage, string> Formatter { get; set; } = new Func<LogMessage, string>(message =>
         {
-              return $"{message.Time.ToString()}: {message.Level.ToString().PadRight(10)} {message.Description}";
+              return $"{message.Time.ToString()}: {message.Level.ToString().PadRight(5)} {message.Description}";
         });
 
         /// <summary>
