@@ -25,6 +25,11 @@ namespace MemoriesLoader
     public partial class MainForm : Form
     {
         /// <summary>
+        /// The form to log to.
+        /// </summary>
+        private LogForm logForm = new LogForm();
+
+        /// <summary>
         /// The logger that is used to log the procedure.
         /// </summary>
         private Logger logger = new Logger();
@@ -70,10 +75,25 @@ namespace MemoriesLoader
         public MainForm()
         {
             InitializeComponent();
-            formatter.Formatter = new Func<LogMessage, string>(message =>
-            {
-                return $"{message.Time.TimeOfDay} {$"[{message.Level}]".PadRight(6)}\t{message.Description}";
-            });
+            formatter.Formatter = new Func<LogMessage, string>(
+                message =>
+                {
+                    return $"{message.Time.TimeOfDay} {$"[{message.Level}]".PadRight(11)}\t{message.Description}";
+                });
+            logger.Targets.AddRange(
+                new LogTarget[]
+                {
+                    new RichTextBoxTarget(logForm.RichTextBox)
+                    {
+                        Level = LogLevel.Info | LogLevel.Warning,
+                        Formatter = formatter
+                    },
+                    new FileTarget(Properties.Settings.Default.LogFileName)
+                    {
+                        Level = LogLevel.All,
+                        Formatter = formatter
+                    }
+                });
         }
 
         /// <summary>
@@ -191,19 +211,19 @@ namespace MemoriesLoader
                                                     Directory.CreateDirectory(path);
                                                 }
 
-                                                Process process = Process.Start(new ProcessStartInfo("bash", $"-c \"gphoto2 -P --skip-existing --port ptpip:{udpReceiveResult.RemoteEndPoint.Address}\"")
-                                                {
-                                                    WorkingDirectory = Path.GetFullPath(path),
+                                                    Process process = Process.Start(new ProcessStartInfo("bash", $"-c \"gphoto2 -P --skip-existing --port ptpip:{udpReceiveResult.RemoteEndPoint.Address}\"")
+                                                    {
+                                                        WorkingDirectory = Path.GetFullPath(path),
                                                     WindowStyle = ProcessWindowStyle.Hidden
-                                                });
+                                                    });
 
                                                 logger.Info($"Running following command: {process.StartInfo.FileName} {process.StartInfo.Arguments}");
 
-                                                if (!process.WaitForExit(2 * 60 * 1000)) // Wait 2 minutes for the process to exit
-                                                {
-                                                    process.Kill();
-                                                }
-                                            }
+                                                    if (!process.WaitForExit(2 * 60 * 1000)) // Wait 2 minutes for the process to exit
+                                                    {
+                                                        process.Kill();
+                                                    }
+                                                            }
 
                                             break;
                                         }
@@ -235,8 +255,40 @@ namespace MemoriesLoader
                 e.Cancel = true;
                 tokenSource.Cancel();
                 await mainTask;
+                notifyIcon.Visible = false;
                 Close();
             }
+        }
+
+        /// <summary>
+        /// Opens the log-window.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An object that contains no event data.</param>
+        private void LogWindowItem_Click(object sender, EventArgs e)
+        {
+            logForm.Refresh();
+            logForm.Show();
+        }
+
+        /// <summary>
+        /// Closes the application.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An object that contains no event data.</param>
+        private void ExitItem_Click(object sender, EventArgs e)
+        {
+            Close();
+        }
+
+        /// <summary>
+        /// Opens up the log-file.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An object that contains no event data.</param>
+        private void LogFileItem_Click(object sender, EventArgs e)
+        {
+            Process.Start(Properties.Settings.Default.LogFileName);
         }
     }
 }
