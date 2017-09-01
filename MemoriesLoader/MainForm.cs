@@ -77,6 +77,19 @@ namespace MemoriesLoader
         }
 
         /// <summary>
+        /// Gets the required creation parameters when the control handle is created.
+        /// </summary>
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams createParams = base.CreateParams;
+                createParams.ExStyle |= 0x80;
+                return createParams;
+            }
+        }
+
+        /// <summary>
         /// Ocurrs when the mainform finished loading.
         /// Starts looking for UPNP-Broadcasts.
         /// </summary>
