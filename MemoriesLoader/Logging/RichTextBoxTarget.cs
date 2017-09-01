@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -27,16 +28,34 @@ namespace MemoriesLoader.Logging
         }
 
         /// <summary>
-        /// Logs a message.
+        /// Logs a <see cref="LogMessage"/>.
         /// </summary>
-        /// <param name="message">The message to log.</param>
-        protected override void LogInternal(string message)
+        /// <param name="message">The <see cref="LogMessage"/> to log.</param>
+        public override void Log(LogMessage message)
         {
-            Action action = () =>
-            {
-                richTextBox.AppendText(message + Environment.NewLine);
-                richTextBox.ScrollToCaret();
-            };
+            MethodInvoker action = new MethodInvoker(
+                () =>
+                {
+                    Color messageColor;
+
+                    switch (message.Level)
+                    {
+                        case LogLevel.Debug:
+                            messageColor = Color.Yellow;
+                            break;
+                        case LogLevel.Warning:
+                            messageColor = Color.Red;
+                            break;
+                        default:
+                            messageColor = richTextBox.SelectionColor;
+                            break;
+                    }
+
+                    Color originalColor = richTextBox.SelectionColor;
+                    richTextBox.SelectionColor = messageColor;
+                    base.Log(message);
+                    richTextBox.SelectionColor = originalColor;
+                });
 
             if (richTextBox.InvokeRequired)
             {
@@ -46,6 +65,16 @@ namespace MemoriesLoader.Logging
             {
                 action();
             }
+        }
+
+        /// <summary>
+        /// Logs a message.
+        /// </summary>
+        /// <param name="message">The message to log.</param>
+        protected override void LogInternal(string message)
+        {
+            richTextBox.AppendText(message + Environment.NewLine);
+            richTextBox.ScrollToCaret();
         }
     }
 }
