@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -220,16 +220,44 @@ namespace MemoriesLoader
                                                     Process process = Process.Start(new ProcessStartInfo("bash", $"-c \"gphoto2 -P --skip-existing --port ptpip:{udpReceiveResult.RemoteEndPoint.Address}\"")
                                                     {
                                                         WorkingDirectory = Path.GetFullPath(path),
-                                                    WindowStyle = ProcessWindowStyle.Hidden
+                                                        UseShellExecute = false,
+                                                        CreateNoWindow = true,
+                                                        RedirectStandardOutput = true,
+                                                        RedirectStandardError = true
                                                     });
 
                                                     logger.Debug($"Running following command: {process.StartInfo.FileName} {process.StartInfo.Arguments}");
 
                                                     if (!process.WaitForExit(2 * 60 * 1000)) // Wait 2 minutes for the process to exit
                                                     {
+                                                        logger.Warn("gphoto2 timed out! Killing the process...");
                                                         process.Kill();
                                                     }
+                                                    else
+                                                    {
+                                                        if (!process.StandardOutput.EndOfStream)
+                                                        {
+                                                            string message = "Received a console output-message from gphoto2:" + Environment.NewLine;
+
+                                                            while (!process.StandardOutput.EndOfStream)
+                                                            {
+                                                                message += "".PadLeft(5, '\t') + await process.StandardOutput.ReadLineAsync() + Environment.NewLine;
                                                             }
+                                                            logger.Debug(message.TrimEnd(Environment.NewLine.ToCharArray()));
+                                                        }
+
+                                                        if (!process.StandardError.EndOfStream)
+                                                        {
+                                                            string message = "Received a console error-message from gphoto2:" + Environment.NewLine;
+
+                                                            while (!process.StandardError.EndOfStream)
+                                                            {
+                                                                message += "".PadLeft(5, '\t') + await process.StandardError.ReadLineAsync() + Environment.NewLine;
+                                                            }
+                                                            logger.Warn(message.TrimEnd(Environment.NewLine.ToCharArray()));
+                                                        }
+                                                    }
+                                            }
 
                                             break;
                                         }
