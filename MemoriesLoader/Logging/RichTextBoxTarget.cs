@@ -21,7 +21,7 @@ namespace MemoriesLoader.Logging
         /// <summary>
         /// Initializes a new instance of the <see cref="RichTextBoxTarget"/> class.
         /// </summary>
-        /// <param name="richTextBox"></param>
+        /// <param name="richTextBox">The <see cref="RichTextBox"/> to write the log to.</param>
         public RichTextBoxTarget(RichTextBox richTextBox)
         {
             this.richTextBox = richTextBox;

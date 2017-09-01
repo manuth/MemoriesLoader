@@ -16,6 +16,9 @@ namespace MemoriesLoader
     /// </summary>
     public partial class LogForm : Form
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LogForm"/> class.
+        /// </summary>
         public LogForm()
         {
             InitializeComponent();
