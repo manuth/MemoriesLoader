@@ -25,6 +25,16 @@ namespace MemoriesLoader
     public partial class MainForm : Form
     {
         /// <summary>
+        /// The IP address for UPNP-broadcasts.
+        /// </summary>
+        private static IPAddress upnpBroadcastIP = new IPAddress(new byte[] { 239, 255, 255, 250 });
+
+        /// <summary>
+        /// The port for UPNP-broadcasts.
+        /// </summary>
+        private static int upnpBroadcastPort = 1900;
+
+        /// <summary>
         /// The form to log to.
         /// </summary>
         private LogForm logForm = new LogForm();
@@ -58,16 +68,6 @@ namespace MemoriesLoader
         /// The cancellation-token.
         /// </summary>
         private CancellationTokenSource tokenSource = new CancellationTokenSource();
-
-        /// <summary>
-        /// The IP address for UPNP-broadcasts.
-        /// </summary>
-        private static IPAddress upnpBroadcastIP = new IPAddress(new byte[] { 239, 255, 255, 250 });
-
-        /// <summary>
-        /// The port for UPNP-broadcasts.
-        /// </summary>
-        private static int upnpBroadcastPort = 1900;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MainForm"/> class.
@@ -119,10 +119,12 @@ namespace MemoriesLoader
         {
             if (File.Exists(Properties.Settings.Default.CameraSettingsPath))
             {
-                cameras = (List<Camera>)(new DataContractJsonSerializer(typeof(List<Camera>), new DataContractJsonSerializerSettings
-                {
-                    UseSimpleDictionaryFormat = true
-                }).ReadObject(File.OpenRead(Properties.Settings.Default.CameraSettingsPath)));
+                cameras = (List<Camera>)new DataContractJsonSerializer(
+                    typeof(List<Camera>),
+                    new DataContractJsonSerializerSettings
+                    {
+                        UseSimpleDictionaryFormat = true
+                    }).ReadObject(File.OpenRead(Properties.Settings.Default.CameraSettingsPath));
 
                 logger.Info($"Settings found located at {Properties.Settings.Default.CameraSettingsPath}");
 
@@ -146,136 +148,141 @@ namespace MemoriesLoader
         /// <summary>
         /// Starts discovering SSDP-requests.
         /// </summary>
+        /// <returns>
+        /// A task that represents the discover-operation.
+        /// </returns>
         private async Task Discover()
         {
             CancellationToken token = tokenSource.Token;
 
-            await Task.Run(async () =>
-            {
-                while (!token.IsCancellationRequested)
+            await Task.Run(
+                async () =>
                 {
-                    using (UdpClient udpClient = new UdpClient())
+                    while (!token.IsCancellationRequested)
                     {
-                        udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                        /* Listen to packets sent to any ipaddress on port 1900 */
-                        udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, upnpBroadcastPort));
-
-                        logger.Debug($"Starting to listen to {udpClient.Client.LocalEndPoint}...");
-
-                        /* Joining the default UDP broadcast group */
+                        using (UdpClient udpClient = new UdpClient())
                         {
-                            IPAddress ipAddress =
-                            (
-                                from address in await Dns.GetHostAddressesAsync(Dns.GetHostName())
-                                where !IPAddress.IsLoopback(address)
-                                select address
-                            ).First();
-                            udpClient.JoinMulticastGroup(upnpBroadcastIP, ipAddress);
-                            logger.Debug($"Adding {ipAddress} to Multicast-Group {upnpBroadcastIP}");
-                        }
+                            udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                            /* Listen to packets sent to any ipaddress on port 1900 */
+                            udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, upnpBroadcastPort));
 
-                        logger.Info("Waiting for a request performed by a device that supports the MtpNullService...");
+                            logger.Debug($"Starting to listen to {udpClient.Client.LocalEndPoint}...");
 
-                        while (!token.IsCancellationRequested)
-                        {
-                            if (udpClient.Available > 0)
+                            /* Joining the default UDP broadcast group */
                             {
-                                UdpReceiveResult udpReceiveResult = await udpClient.ReceiveAsync();
+                                IPAddress ipAddress = (
+                                    from address in await Dns.GetHostAddressesAsync(Dns.GetHostName())
+                                    where !IPAddress.IsLoopback(address)
+                                    select address).First();
+                                udpClient.JoinMulticastGroup(upnpBroadcastIP, ipAddress);
+                                logger.Debug($"Adding {ipAddress} to Multicast-Group {upnpBroadcastIP}");
+                            }
 
-                                if (udpReceiveResult.Buffer.Length > 0)
+                            logger.Info("Waiting for a request performed by a device that supports the MtpNullService...");
+
+                            while (!token.IsCancellationRequested)
+                            {
+                                if (udpClient.Available > 0)
                                 {
-                                    string result = Encoding.UTF8.GetString(udpReceiveResult.Buffer);
+                                    UdpReceiveResult udpReceiveResult = await udpClient.ReceiveAsync();
 
-                                    if (result.ToUpper().Contains("MTPNULLSERVICE") && result.ToUpper().Contains("LOCATION"))
+                                    if (udpReceiveResult.Buffer.Length > 0)
                                     {
-                                        Match match = Regex.Match(result, ".*LOCATION: (.*?)\\r?$", RegexOptions.IgnoreCase | RegexOptions.Multiline);
-                                        WebRequest request = WebRequest.Create(match.Groups[1].Value);
-                                        request.Timeout = 4;
+                                        string result = Encoding.UTF8.GetString(udpReceiveResult.Buffer);
 
-                                        logger.Info($"Downloading device-description from \"{request.RequestUri}\"...");
-
-                                        try
+                                        if (result.ToUpper().Contains("MTPNULLSERVICE") && result.ToUpper().Contains("LOCATION"))
                                         {
-                                            DeviceDescription deviceInfo = (DeviceDescription)new XmlSerializer(typeof(DeviceDescription)).Deserialize((await request.GetResponseAsync()).GetResponseStream());
+                                            Match match = Regex.Match(result, ".*LOCATION: (.*?)\\r?$", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+                                            WebRequest request = WebRequest.Create(match.Groups[1].Value);
+                                            request.Timeout = 4;
 
-                                            logger.Info("Sucessfully downloaded the device-description:" + Environment.NewLine +
-                                                $"{new string('\t', 5)}Name:\t{deviceInfo.Device.Name}" + Environment.NewLine +
-                                                $"{new string('\t', 5)}Manufacturer:\t{deviceInfo.Device.Manufacturer}" + Environment.NewLine +
-                                                $"{new string('\t', 5)}{"Website".PadLeft(12)}:\t{deviceInfo.Device.ManufacturerUri}" + Environment.NewLine +
-                                                $"{new string('\t', 5)}GUID:\t{deviceInfo.Device.GUID}");
-                                            logger.Info("Checking whether it's a Sony camera...");
+                                            logger.Info($"Downloading device-description from \"{request.RequestUri}\"...");
 
-                                            if (deviceInfo.Device.Manufacturer == "Sony Corporation")
+                                            try
                                             {
-                                                string path = cameras.FirstOrDefault(camera => camera.IPAddress.Equals(udpReceiveResult.RemoteEndPoint.Address))?.Directory ?? udpReceiveResult.RemoteEndPoint.Address.ToString();
+                                                DeviceDescription deviceInfo = (DeviceDescription)new XmlSerializer(typeof(DeviceDescription)).Deserialize((await request.GetResponseAsync()).GetResponseStream());
 
-                                                logger.Info("Success!");
-                                                logger.Info($"The files received from {udpReceiveResult.RemoteEndPoint.Address} will be saved to \"{Path.GetFullPath(path)}\"");
+                                                logger.Info("Sucessfully downloaded the device-description:" + Environment.NewLine +
+                                                    $"{new string('\t', 5)}Name:\t{deviceInfo.Device.Name}" + Environment.NewLine +
+                                                    $"{new string('\t', 5)}Manufacturer:\t{deviceInfo.Device.Manufacturer}" + Environment.NewLine +
+                                                    $"{new string('\t', 5)}{"Website".PadLeft(12)}:\t{deviceInfo.Device.ManufacturerUri}" + Environment.NewLine +
+                                                    $"{new string('\t', 5)}GUID:\t{deviceInfo.Device.GUID}");
+                                                logger.Info("Checking whether it's a Sony camera...");
 
-                                                if (!Directory.Exists(path))
+                                                if (deviceInfo.Device.Manufacturer == "Sony Corporation")
                                                 {
-                                                    Directory.CreateDirectory(path);
+                                                    string path = cameras.FirstOrDefault(camera => camera.IPAddress.Equals(udpReceiveResult.RemoteEndPoint.Address))?.Directory ?? udpReceiveResult.RemoteEndPoint.Address.ToString();
+
+                                                    logger.Info("Success!");
+                                                    logger.Info($"The files received from {udpReceiveResult.RemoteEndPoint.Address} will be saved to \"{Path.GetFullPath(path)}\"");
+
+                                                    if (!Directory.Exists(path))
+                                                    {
+                                                        Directory.CreateDirectory(path);
+                                                    }
+
+                                                        Process process = Process.Start(new ProcessStartInfo("bash", $"-c \"gphoto2 -P --skip-existing --port ptpip:{udpReceiveResult.RemoteEndPoint.Address}\"")
+                                                        {
+                                                            WorkingDirectory = Path.GetFullPath(path),
+                                                            UseShellExecute = false,
+                                                            CreateNoWindow = true,
+                                                            RedirectStandardOutput = true,
+                                                            RedirectStandardError = true
+                                                        });
+
+                                                        logger.Debug($"Running following command: {process.StartInfo.FileName} {process.StartInfo.Arguments}");
+
+                                                        if (!process.WaitForExit(2 * 60 * 1000)) // Wait 2 minutes for the process to exit
+                                                        {
+                                                            logger.Warn("gphoto2 timed out! Killing the process...");
+                                                            process.Kill();
+                                                        }
+                                                        else
+                                                        {
+                                                            if (!process.StandardOutput.EndOfStream)
+                                                            {
+                                                                string message = "Received a console output-message from gphoto2:" + Environment.NewLine;
+
+                                                                while (!process.StandardOutput.EndOfStream)
+                                                                {
+                                                                    message += new string('\t', 5) + await process.StandardOutput.ReadLineAsync() + Environment.NewLine;
+                                                                }
+
+                                                                logger.Debug(message.TrimEnd(Environment.NewLine.ToCharArray()));
+                                                            }
+
+                                                            if (!process.StandardError.EndOfStream)
+                                                            {
+                                                                string message = "Received a console error-message from gphoto2:" + Environment.NewLine;
+
+                                                                while (!process.StandardError.EndOfStream)
+                                                                {
+                                                                    message += new string('\t', 5) + await process.StandardError.ReadLineAsync() + Environment.NewLine;
+                                                                }
+
+                                                                logger.Warn(message.TrimEnd(Environment.NewLine.ToCharArray()));
+                                                            }
+                                                        }
                                                 }
 
-                                                    Process process = Process.Start(new ProcessStartInfo("bash", $"-c \"gphoto2 -P --skip-existing --port ptpip:{udpReceiveResult.RemoteEndPoint.Address}\"")
-                                                    {
-                                                        WorkingDirectory = Path.GetFullPath(path),
-                                                        UseShellExecute = false,
-                                                        CreateNoWindow = true,
-                                                        RedirectStandardOutput = true,
-                                                        RedirectStandardError = true
-                                                    });
-
-                                                    logger.Debug($"Running following command: {process.StartInfo.FileName} {process.StartInfo.Arguments}");
-
-                                                    if (!process.WaitForExit(2 * 60 * 1000)) // Wait 2 minutes for the process to exit
-                                                    {
-                                                        logger.Warn("gphoto2 timed out! Killing the process...");
-                                                        process.Kill();
-                                                    }
-                                                    else
-                                                    {
-                                                        if (!process.StandardOutput.EndOfStream)
-                                                        {
-                                                            string message = "Received a console output-message from gphoto2:" + Environment.NewLine;
-
-                                                            while (!process.StandardOutput.EndOfStream)
-                                                            {
-                                                                message += "".PadLeft(5, '\t') + await process.StandardOutput.ReadLineAsync() + Environment.NewLine;
-                                                            }
-                                                            logger.Debug(message.TrimEnd(Environment.NewLine.ToCharArray()));
-                                                        }
-
-                                                        if (!process.StandardError.EndOfStream)
-                                                        {
-                                                            string message = "Received a console error-message from gphoto2:" + Environment.NewLine;
-
-                                                            while (!process.StandardError.EndOfStream)
-                                                            {
-                                                                message += "".PadLeft(5, '\t') + await process.StandardError.ReadLineAsync() + Environment.NewLine;
-                                                            }
-                                                            logger.Warn(message.TrimEnd(Environment.NewLine.ToCharArray()));
-                                                        }
-                                                    }
+                                                break;
                                             }
-
-                                            break;
-                                        }
-                                        catch (WebException)
-                                        {
-                                            logger.Warn($"Couldn't download device-description!");
+                                            catch (WebException)
+                                            {
+                                                logger.Warn($"Couldn't download device-description!");
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        logger.Info("Cleaning up, leaving MulticastGroups and closing the udp client...");
-                        udpClient.DropMulticastGroup(upnpBroadcastIP);
-                        udpClient.Close();
+                            logger.Info("Cleaning up, leaving MulticastGroups and closing the udp client...");
+                            udpClient.DropMulticastGroup(upnpBroadcastIP);
+                            udpClient.Close();
+                        }
                     }
-                }
-            }, token);
+                },
+                token);
         }
 
         /// <summary>

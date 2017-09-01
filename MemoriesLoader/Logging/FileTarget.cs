@@ -13,11 +13,6 @@ namespace MemoriesLoader.Logging
     public class FileTarget : StreamTarget
     {
         /// <summary>
-        /// Gets the file to log to.
-        /// </summary>
-        public FileInfo FileInfo { get; private set; }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="FileTarget"/> class with a file-name.
         /// </summary>
         /// <param name="fileName">The name of the file to log to.</param>
@@ -35,5 +30,10 @@ namespace MemoriesLoader.Logging
         {
             FileInfo = new FileInfo(fileStream.Name);
         }
+
+        /// <summary>
+        /// Gets the file to log to.
+        /// </summary>
+        public FileInfo FileInfo { get; private set; }
     }
 }

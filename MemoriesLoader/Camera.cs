@@ -29,7 +29,7 @@ namespace MemoriesLoader
         /// Gets or sets the IP-Address of the camera as a string.
         /// </summary>
         [DataMember(Name = "ipAddress")]
-        private string ipAddressString
+        private string IPAddressString
         {
             get
             {

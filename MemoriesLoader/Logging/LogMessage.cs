@@ -30,11 +30,11 @@ namespace MemoriesLoader.Logging
         /// <summary>
         /// Gets the time of the creation of the message.
         /// </summary>
-        public DateTime Time { get; protected set; } = DateTime.Now;
+        public DateTime Time { get; } = DateTime.Now;
 
         /// <summary>
         /// Gets or sets the description of the message.
         /// </summary>
-        public string Description { get; set; } = String.Empty;
+        public string Description { get; set; } = string.Empty;
     }
 }

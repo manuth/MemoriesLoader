@@ -1,12 +1,14 @@
-﻿
-using System;
+﻿using System;
 
 namespace MemoriesLoader.Logging
 {
     /// <summary>
+    /// <para>
     /// Defines constants to declare the level of a log-message.
-    /// 
+    /// </para>
+    /// <para>
     /// This enumeration has a <see cref="FlagsAttribute"/> attribute that allows a bitwise combination of its member values.
+    /// </para>
     /// </summary>
     [Flags]
     public enum LogLevel

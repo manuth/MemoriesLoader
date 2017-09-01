@@ -13,16 +13,6 @@ namespace MemoriesLoader.Logging
     public class StreamTarget : LogTarget
     {
         /// <summary>
-        /// Gets the encoding to write to the stream.
-        /// </summary>
-        public Encoding Encoding { get; private set; }
-
-        /// <summary>
-        /// Gets or sets the <see cref="System.IO.Stream"/> to log to.
-        /// </summary>
-        public Stream Stream { get; private set; }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="StreamTarget"/> class with a stream.
         /// </summary>
         /// <param name="stream">The <see cref="Stream"/> to log to.</param>
@@ -31,6 +21,16 @@ namespace MemoriesLoader.Logging
             Encoding = Encoding.UTF8;
             Stream = stream;
         }
+        
+        /// <summary>
+        /// Gets the encoding to write to the stream.
+        /// </summary>
+        public Encoding Encoding { get; private set; }
+
+        /// <summary>
+        /// Gets <see cref="System.IO.Stream"/> to log to.
+        /// </summary>
+        public Stream Stream { get; private set; }
 
         /// <summary>
         /// Logs a message.
