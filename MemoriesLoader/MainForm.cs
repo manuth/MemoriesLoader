@@ -135,10 +135,10 @@ namespace MemoriesLoader
                             logger.Debug($"Adding {ipAddress} to Multicast-Group {upnpBroadcastIP}");
                         }
 
+                        logger.Info("Waiting for a request performed by a device that supports the MtpNullService...");
+
                         while (!token.IsCancellationRequested)
                         {
-                            logger.Info("Waiting for a request performed by a device that supports the MtpNullService...");
-
                             if (udpClient.Available > 0)
                             {
                                 UdpReceiveResult udpReceiveResult = await udpClient.ReceiveAsync();
