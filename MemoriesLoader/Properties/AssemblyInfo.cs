@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 // Attribute gesteuert. Ändern Sie diese Attributwerte, um die Informationen zu ändern,
 // die einer Assembly zugeordnet sind.
 [assembly: AssemblyTitle("MemoriesLoader")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Automatically downloads pictures from Sony Cameras.")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Win PE Pass")]
+[assembly: AssemblyCompany("Amt für Informatik")]
 [assembly: AssemblyProduct("MemoriesLoader")]
-[assembly: AssemblyCopyright("Copyright © Win PE Pass 2017")]
+[assembly: AssemblyCopyright("Copyright © Amt für Informatik 2017")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
