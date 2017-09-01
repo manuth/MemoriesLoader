@@ -124,14 +124,20 @@ namespace MemoriesLoader
                     UseSimpleDictionaryFormat = true
                 }).ReadObject(File.OpenRead(Properties.Settings.Default.CameraSettingsPath)));
 
-                string message = Environment.NewLine + $"\tSettings found located at {Properties.Settings.Default.CameraSettingsPath}.";
+                logger.Info($"Settings found located at {Properties.Settings.Default.CameraSettingsPath}");
+
+                string message = string.Empty;
 
                 foreach (Camera camera in cameras)
                 {
-                    message += Environment.NewLine + $"\t\tIPAddress: {camera.IPAddress.ToString()},\tOutput-Directory: {camera.Directory}";
+                    message += Environment.NewLine + $"{new string('\t', 5)}IPAddress: {camera.IPAddress.ToString()},\tOutput-Directory: {camera.Directory}";
                 }
 
-                logger.Info(message);
+                logger.Debug(message);
+            }
+            else
+            {
+                logger.Warn($"No Settings found located at {Properties.Settings.Default.CameraSettingsPath}");
             }
 
             mainTask = Discover();
@@ -193,10 +199,10 @@ namespace MemoriesLoader
                                             DeviceDescription deviceInfo = (DeviceDescription)new XmlSerializer(typeof(DeviceDescription)).Deserialize((await request.GetResponseAsync()).GetResponseStream());
 
                                             logger.Info("Sucessfully downloaded the device-description:" + Environment.NewLine +
-                                                $"\tName:\t{deviceInfo.Device.Name}" + Environment.NewLine +
-                                                $"\tManufacturer:\t{deviceInfo.Device.Manufacturer}" + Environment.NewLine +
-                                                $"\t{"Website".PadLeft(12)}:\t{deviceInfo.Device.ManufacturerUri}" + Environment.NewLine +
-                                                $"\tGUID:\t{deviceInfo.Device.GUID}");
+                                                $"{new string('\t', 5)}Name:\t{deviceInfo.Device.Name}" + Environment.NewLine +
+                                                $"{new string('\t', 5)}Manufacturer:\t{deviceInfo.Device.Manufacturer}" + Environment.NewLine +
+                                                $"{new string('\t', 5)}{"Website".PadLeft(12)}:\t{deviceInfo.Device.ManufacturerUri}" + Environment.NewLine +
+                                                $"{new string('\t', 5)}GUID:\t{deviceInfo.Device.GUID}");
                                             logger.Info("Checking whether it's a Sony camera...");
 
                                             if (deviceInfo.Device.Manufacturer == "Sony Corporation")
@@ -217,7 +223,7 @@ namespace MemoriesLoader
                                                     WindowStyle = ProcessWindowStyle.Hidden
                                                     });
 
-                                                logger.Info($"Running following command: {process.StartInfo.FileName} {process.StartInfo.Arguments}");
+                                                    logger.Debug($"Running following command: {process.StartInfo.FileName} {process.StartInfo.Arguments}");
 
                                                     if (!process.WaitForExit(2 * 60 * 1000)) // Wait 2 minutes for the process to exit
                                                     {
@@ -227,14 +233,15 @@ namespace MemoriesLoader
 
                                             break;
                                         }
-                                        catch
+                                        catch (WebException)
                                         {
-                                            // TODO
+                                            logger.Warn($"Couldn't download device-description!");
                                         }
                                     }
                                 }
                             }
                         }
+
                         logger.Info("Cleaning up, leaving MulticastGroups and closing the udp client...");
                         udpClient.DropMulticastGroup(upnpBroadcastIP);
                         udpClient.Close();
