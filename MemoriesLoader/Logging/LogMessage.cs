@@ -12,9 +12,9 @@ namespace MemoriesLoader.Logging
     public class LogMessage
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="LogMessage"/> class with a
+        /// Initializes a new instance of the <see cref="LogMessage"/> class with a log-level and a description.
         /// </summary>
-        /// <param name="level">The <see cref="LogLevel"/> pof the messgae.</param>
+        /// <param name="level">The <see cref="LogLevel"/> of the message.</param>
         /// <param name="message">The description of the message.</param>
         public LogMessage(LogLevel level, string message)
         {

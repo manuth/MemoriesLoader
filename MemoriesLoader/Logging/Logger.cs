@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace MemoriesLoader.Logging
 {
     /// <summary>
-    /// Provides the functionallity to log procedures.
+    /// Provides the functionality to log procedures.
     /// </summary>
     public partial class Logger
     {

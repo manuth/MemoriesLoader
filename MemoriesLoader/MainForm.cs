@@ -60,7 +60,7 @@ namespace MemoriesLoader
         private CancellationTokenSource tokenSource = new CancellationTokenSource();
 
         /// <summary>
-        /// The ip-address for UPNP-broadcasts.
+        /// The IP address for UPNP-broadcasts.
         /// </summary>
         private static IPAddress upnpBroadcastIP = new IPAddress(new byte[] { 239, 255, 255, 250 });
 
@@ -110,7 +110,7 @@ namespace MemoriesLoader
         }
 
         /// <summary>
-        /// Ocurrs when the mainform finished loading.
+        /// Occurs when the main-form finished loading.
         /// Starts looking for UPNP-Broadcasts.
         /// </summary>
         /// <param name="sender">The source of the event.</param>

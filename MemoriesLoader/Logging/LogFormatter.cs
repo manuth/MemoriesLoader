@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace MemoriesLoader.Logging
 {
     /// <summary>
-    /// Provides the functionallity to format <see cref="LogMessage"/>s.
+    /// Provides the functionality to format <see cref="LogMessage"/>s.
     /// </summary>
     public class LogFormatter
     {
