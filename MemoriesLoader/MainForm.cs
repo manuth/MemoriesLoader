@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -84,14 +84,14 @@ namespace MemoriesLoader
         /// <param name="e">An object that contains no event data.</param>
         private void MainForm_Load(object sender, EventArgs e)
         {
-            if (File.Exists("Cameras.json"))
+            if (File.Exists(Properties.Settings.Default.CameraSettingsPath))
             {
                 cameras = (List<Camera>)(new DataContractJsonSerializer(typeof(List<Camera>), new DataContractJsonSerializerSettings
                 {
                     UseSimpleDictionaryFormat = true
-                }).ReadObject(File.OpenRead("Cameras.json")));
+                }).ReadObject(File.OpenRead(Properties.Settings.Default.CameraSettingsPath)));
 
-                string message = Environment.NewLine + "\tSettings found located at .\\Cameras.json.";
+                string message = Environment.NewLine + $"\tSettings found located at {Properties.Settings.Default.CameraSettingsPath}.";
 
                 foreach (Camera camera in cameras)
                 {
