@@ -36,11 +36,11 @@ namespace MemoriesLoader.Logging
         /// Logs a message.
         /// </summary>
         /// <param name="message">The message to log.</param>
-        protected override void LogInternal(string message)
+        protected override void LogInternal(LogMessage message)
         {
             using (BinaryWriter writer = new BinaryWriter(Stream, Encoding, true))
             {
-                writer.Write(Encoding.GetBytes(message + Environment.NewLine));
+                writer.Write(Encoding.GetBytes(Formatter.Format(message) + Environment.NewLine));
                 Stream.Flush();
             }
         }

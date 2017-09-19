@@ -179,6 +179,11 @@ namespace MemoriesLoader
                             }
 
                             logger.Info("Waiting for a request performed by a device that supports the MtpNullService...");
+                            logger.Warn("Waiting for a request performed by a device that supports the MtpNullService...");
+                            logger.Debug("Waiting for a request performed by a device that supports the MtpNullService...");
+                            logger.Info("Waiting for a request performed by a device that supports the MtpNullService...");
+                            logger.Warn("Waiting for a request performed by a device that supports the MtpNullService...");
+                            logger.Info("Waiting for a request performed by a device that supports the MtpNullService...");
 
                             while (!token.IsCancellationRequested)
                             {

@@ -22,9 +22,9 @@ namespace MemoriesLoader.Logging
         /// Logs a message.
         /// </summary>
         /// <param name="message">The message to log.</param>
-        protected override void LogInternal(string message)
+        protected override void LogInternal(LogMessage message)
         {
-            Console.WriteLine(message);
+            Console.WriteLine(Formatter.Format(message));
         }
     }
 }

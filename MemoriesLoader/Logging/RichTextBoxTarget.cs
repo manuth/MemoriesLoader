@@ -36,25 +36,7 @@ namespace MemoriesLoader.Logging
             MethodInvoker action = new MethodInvoker(
                 () =>
                 {
-                    Color messageColor;
-
-                    switch (message.Level)
-                    {
-                        case LogLevel.Debug:
-                            messageColor = Color.Yellow;
-                            break;
-                        case LogLevel.Warning:
-                            messageColor = Color.Red;
-                            break;
-                        default:
-                            messageColor = richTextBox.SelectionColor;
-                            break;
-                    }
-
-                    Color originalColor = richTextBox.SelectionColor;
-                    richTextBox.SelectionColor = messageColor;
                     base.Log(message);
-                    richTextBox.SelectionColor = originalColor;
                 });
 
             if (richTextBox.InvokeRequired)
@@ -71,10 +53,29 @@ namespace MemoriesLoader.Logging
         /// Logs a message.
         /// </summary>
         /// <param name="message">The message to log.</param>
-        protected override void LogInternal(string message)
+        protected override void LogInternal(LogMessage message)
         {
-            richTextBox.AppendText(message + Environment.NewLine);
+            Color messageColor;
+            Color originalColor = richTextBox.SelectionColor;
+
+            switch (message.Level)
+            {
+                case LogLevel.Debug:
+                    messageColor = Color.Yellow;
+                    break;
+                case LogLevel.Warning:
+                    messageColor = Color.Red;
+                    break;
+                default:
+                    messageColor = richTextBox.SelectionColor;
+                    break;
+            }
+
+            richTextBox.SelectionColor = messageColor;
+            richTextBox.AppendText(Formatter.Format(message));
             richTextBox.ScrollToCaret();
+            richTextBox.SelectionColor = originalColor;
+            richTextBox.AppendText(Environment.NewLine);
         }
     }
 }

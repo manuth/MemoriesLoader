@@ -29,7 +29,7 @@ namespace MemoriesLoader.Logging
         {
             if (Level.HasFlag(message.Level))
             {
-                LogInternal(Formatter.Format(message));
+                LogInternal(message);
             }
         }
 
@@ -37,6 +37,6 @@ namespace MemoriesLoader.Logging
         /// Logs a message.
         /// </summary>
         /// <param name="message">The message to log.</param>
-        protected abstract void LogInternal(string message);
+        protected abstract void LogInternal(LogMessage message);
     }
 }
